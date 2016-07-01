@@ -1,0 +1,6 @@
+[package]
+name = "ruuls"
+version = "0.1.0"
+authors = ["Benn Sundsrud <benn.sundsrud@gmail.com>"]
+
+[dependencies]
