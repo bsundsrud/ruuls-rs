@@ -1,13 +1,17 @@
 use std::collections::BTreeMap;
 use std::ops::{BitOr, BitAnd};
 
-/// ***********************************************************************
-/// STATUS
-/// **********************************************************************
+// ***********************************************************************
+// STATUS
+// **********************************************************************
+/// The status of a rule check
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Status {
+    /// Rule was satisfied
     Met,
+    /// Rule was not satisfied
     NotMet,
+    /// There was not enough information to evaluate
     Unknown,
 }
 
@@ -34,66 +38,74 @@ impl BitOr for Status {
     }
 }
 
-/// ***********************************************************************
-/// CHECKLIST
-/// **********************************************************************
+// ***********************************************************************
+// Rule
+// **********************************************************************
 #[derive(Debug)]
-pub enum Checklist {
-    And(Vec<Checklist>),
-    Or(Vec<Checklist>),
-    NumberOf(usize, Vec<Checklist>),
+/// Representation of a node in the rules tree
+///
+/// It is unnecessary to interact with this type outside of calling `Rule::check()`, 
+/// to construct the rules tree use the [convenience functions][1] in the module root.
+///
+/// [1]: index.html#functions
+pub enum Rule {
+    And(Vec<Rule>),
+    Or(Vec<Rule>),
+    NumberOf(usize, Vec<Rule>),
     // Rule(Description, Field, Constraint)
     Rule(String, String, Constraint),
 }
 
-impl Checklist {
-    pub fn check(&self, info: &BTreeMap<String, String>) -> ChecklistResult {
+impl Rule {
+    /// Starting at this node, recursively check (depth-first) any child nodes and 
+    /// aggregate the results
+    pub fn check(&self, info: &BTreeMap<String, String>) -> RuleResult {
         match *self {
-            Checklist::And(ref checklists) => {
+            Rule::And(ref rules) => {
                 let mut status = Status::Met;
-                let children = checklists.iter()
-                    .map(|c| c.check(info))
-                    .inspect(|r| status = status & r.status)
-                    .collect::<Vec<_>>();
-                ChecklistResult {
+                let children = rules.iter()
+                                    .map(|c| c.check(info))
+                                    .inspect(|r| status = status & r.status)
+                                    .collect::<Vec<_>>();
+                RuleResult {
                     name: "And".into(),
                     status: status,
                     children: children,
                 }
             }
-            Checklist::Or(ref checklists) => {
+            Rule::Or(ref rules) => {
                 let mut status = Status::NotMet;
-                let children = checklists.iter()
-                    .map(|c| c.check(info))
-                    .inspect(|r| status = status | r.status)
-                    .collect::<Vec<_>>();
-                ChecklistResult {
+                let children = rules.iter()
+                                    .map(|c| c.check(info))
+                                    .inspect(|r| status = status | r.status)
+                                    .collect::<Vec<_>>();
+                RuleResult {
                     name: "Or".into(),
                     status: status,
                     children: children,
                 }
             }
-            Checklist::NumberOf(count, ref checklists) => {
+            Rule::NumberOf(count, ref rules) => {
                 let mut met_count = 0;
                 let mut failed_count = 0;
-                let children = checklists.iter()
-                    .map(|c| c.check(info))
-                    .inspect(|r| {
-                        if r.status == Status::Met {
-                            met_count += 1;
-                        } else if r.status == Status::NotMet {
-                            failed_count += 1;
-                        }
-                    })
-                    .collect::<Vec<_>>();
+                let children = rules.iter()
+                                    .map(|c| c.check(info))
+                                    .inspect(|r| {
+                                        if r.status == Status::Met {
+                                            met_count += 1;
+                                        } else if r.status == Status::NotMet {
+                                            failed_count += 1;
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
                 let status = if met_count >= count {
                     Status::Met
-                } else if failed_count >= count {
+                } else if failed_count >= children.len() - count + 1 {
                     Status::NotMet
                 } else {
                     Status::Unknown
                 };
-                ChecklistResult {
+                RuleResult {
                     name: format!("At least {} of", count),
                     status: status,
                     children: children,
@@ -101,13 +113,13 @@ impl Checklist {
 
 
             }
-            Checklist::Rule(ref name, ref field, ref constraint) => {
+            Rule::Rule(ref name, ref field, ref constraint) => {
                 let status = if let Some(s) = info.get(field) {
                     constraint.check(s)
                 } else {
                     Status::Unknown
                 };
-                ChecklistResult {
+                RuleResult {
                     name: name.to_owned(),
                     status: status,
                     children: Vec::new(),
@@ -115,15 +127,11 @@ impl Checklist {
             }
         }
     }
-
-    pub fn rule(description: &str, field: &str, constraint: Constraint) -> Checklist {
-        Checklist::Rule(description.into(), field.into(), constraint)
-    }
 }
 
-/// ***********************************************************************
-/// CONSTRAINT
-/// **********************************************************************
+// ***********************************************************************
+// CONSTRAINT
+// **********************************************************************
 #[derive(Debug)]
 pub enum Constraint {
     StringEquals(String),
@@ -178,40 +186,16 @@ impl Constraint {
     }
 }
 
-/// ***********************************************************************
-/// CHECKLIST RESULT
-/// **********************************************************************
+// ***********************************************************************
+// Rule RESULT
+// **********************************************************************
+/// Result of checking a rules tree.  
 #[derive(Debug)]
-pub struct ChecklistResult {
-    name: String,
-    status: Status,
-    children: Vec<ChecklistResult>,
-}
-
-/// ***********************************************************************
-/// TESTS
-/// **********************************************************************
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        use super::{Constraint, Checklist};
-        use std::collections::BTreeMap;
-        let mut map = BTreeMap::new();
-        map.insert("foo".into(), "1".into());
-        map.insert("baz".into(), "true".into());
-        map.insert("bar".into(), "3".into());
-        let tree = Checklist::NumberOf(2,
-                                       vec![Checklist::Rule("foo is 1".into(),
-                                                            "foo".into(),
-                                                            Constraint::StringEquals("1".into())),
-                                            Checklist::Rule("bar is 2".into(),
-                                                            "bar".into(),
-                                                            Constraint::IntEquals(2)),
-                                            Checklist::Rule("baz is true".into(),
-                                                            "baz".into(),
-                                                            Constraint::Boolean(true))]);
-        let res = tree.check(&map);
-        println!("{:?}", res);
-    }
+pub struct RuleResult {
+    /// Human-friendly description of the rule
+    pub name: String,
+    /// top-level status of this result
+    pub status: Status,
+    /// Results of any sub-rules
+    pub children: Vec<RuleResult>,
 }
