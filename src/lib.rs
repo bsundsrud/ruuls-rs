@@ -56,9 +56,7 @@
 //! [1]: enum.Rule.html#method.check
 mod ruuls;
 
-pub use ruuls::{Rule, RuleResult, Status};
-
-use ruuls::Constraint;
+pub use ruuls::{Constraint, Rule, RuleResult, Status};
 
 /// Creates a `Rule` where all child `Rule`s must be `Met`
 /// 
