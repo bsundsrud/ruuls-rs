@@ -6,6 +6,7 @@ use std::ops::{BitOr, BitAnd};
 // **********************************************************************
 /// The status of a rule check
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Status {
     /// Rule was satisfied
     Met,
@@ -41,13 +42,15 @@ impl BitOr for Status {
 // ***********************************************************************
 // Rule
 // **********************************************************************
-#[derive(Debug)]
+
 /// Representation of a node in the rules tree
 ///
 /// It is unnecessary to interact with this type outside of calling `Rule::check()`, 
 /// to construct the rules tree use the [convenience functions][1] in the module root.
 ///
 /// [1]: index.html#functions
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Rule {
     And(Vec<Rule>),
     Or(Vec<Rule>),
@@ -133,6 +136,7 @@ impl Rule {
 // CONSTRAINT
 // **********************************************************************
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Constraint {
     StringEquals(String),
     IntEquals(i32),
@@ -191,6 +195,7 @@ impl Constraint {
 // **********************************************************************
 /// Result of checking a rules tree.  
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RuleResult {
     /// Human-friendly description of the rule
     pub name: String,

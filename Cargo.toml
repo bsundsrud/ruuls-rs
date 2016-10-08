@@ -4,4 +4,10 @@ version = "0.1.0"
 authors = ["Benn Sundsrud <benn.sundsrud@gmail.com>"]
 license = "MIT/Apache-2.0"
 
+[features]
+default = []
+serde_support = ["serde", "serde_derive"]
+
 [dependencies]
+serde = { version = "*", optional = true }
+serde_derive = { version = "*", optional = true }

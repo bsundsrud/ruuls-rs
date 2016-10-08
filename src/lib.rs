@@ -54,6 +54,14 @@
 //! ```
 //!
 //! [1]: enum.Rule.html#method.check
+
+
+#![feature(rustc_macro, structural_match, rustc_attrs)]
+#[cfg(feature = "serde")]
+extern crate serde;
+#[cfg(feature = "serde")]
+#[macro_use] extern crate serde_derive;
+
 mod ruuls;
 
 pub use ruuls::{Constraint, Rule, RuleResult, Status};
