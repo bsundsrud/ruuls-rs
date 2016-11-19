@@ -56,7 +56,7 @@
 //! [1]: enum.Rule.html#method.check
 
 
-#![feature(rustc_macro, structural_match, rustc_attrs)]
+#![feature(structural_match, rustc_attrs, proc_macro)]
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(feature = "serde")]
