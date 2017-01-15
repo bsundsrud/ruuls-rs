@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::ops::{BitOr, BitAnd};
 
 // ***********************************************************************
@@ -52,19 +52,19 @@ impl BitOr for Status {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Rule {
-    And(Vec<Rule>),
-    Or(Vec<Rule>),
-    NumberOf(usize, Vec<Rule>),
+    And { rules: Vec<Rule> },
+    Or { rules: Vec<Rule> },
+    NumberOf { n: usize, rules: Vec<Rule> },
     // Rule(Description, Field, Constraint)
-    Rule(String, String, Constraint),
+    Rule { desc: String, field: String, constraint: Constraint },
 }
 
 impl Rule {
     /// Starting at this node, recursively check (depth-first) any child nodes and 
     /// aggregate the results
-    pub fn check(&self, info: &BTreeMap<String, String>) -> RuleResult {
+    pub fn check(&self, info: &HashMap<String, String>) -> RuleResult {
         match *self {
-            Rule::And(ref rules) => {
+            Rule::And { ref rules } => {
                 let mut status = Status::Met;
                 let children = rules.iter()
                                     .map(|c| c.check(info))
@@ -76,7 +76,7 @@ impl Rule {
                     children: children,
                 }
             }
-            Rule::Or(ref rules) => {
+            Rule::Or{ ref rules } => {
                 let mut status = Status::NotMet;
                 let children = rules.iter()
                                     .map(|c| c.check(info))
@@ -88,7 +88,7 @@ impl Rule {
                     children: children,
                 }
             }
-            Rule::NumberOf(count, ref rules) => {
+            Rule::NumberOf { n: count, ref rules } => {
                 let mut met_count = 0;
                 let mut failed_count = 0;
                 let children = rules.iter()
@@ -116,7 +116,7 @@ impl Rule {
 
 
             }
-            Rule::Rule(ref name, ref field, ref constraint) => {
+            Rule::Rule { desc: ref name, ref field, ref constraint } => {
                 let status = if let Some(s) = info.get(field) {
                     constraint.check(s)
                 } else {

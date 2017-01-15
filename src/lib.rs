@@ -56,7 +56,7 @@
 //! [1]: enum.Rule.html#method.check
 
 
-#![feature(structural_match, rustc_attrs, proc_macro)]
+#![feature(structural_match, rustc_attrs)]
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(feature = "serde")]
@@ -72,7 +72,7 @@ pub use ruuls::{Constraint, Rule, RuleResult, Status};
 /// * If the results contain only `Met` and `Unknown`, the result will be `Unknown`
 /// * Only results in `Met` if all children are `Met`
 pub fn and(rules: Vec<Rule>) -> Rule {
-    Rule::And(rules)
+    Rule::And { rules: rules }
 }
 
 /// Creates a `Rule` where any child `Rule` must be `Met`
@@ -81,7 +81,7 @@ pub fn and(rules: Vec<Rule>) -> Rule {
 /// * If the results contain only `NotMet` and `Unknown`, the result will be `Unknown`
 /// * Only results in `NotMet` if all children are `NotMet`
 pub fn or(rules: Vec<Rule>) -> Rule {
-    Rule::Or(rules)
+    Rule::Or { rules: rules }
 }
 
 /// Creates a `Rule` where `n` child `Rule`s must be `Met`
@@ -90,37 +90,49 @@ pub fn or(rules: Vec<Rule>) -> Rule {
 /// * If `>= children.len() - n + 1` are `NotMet`, the result will be `NotMet` (No combination of `Met` + `Unknown` can be >= `n`)
 /// * If neither of the above are met, the result is `Unknown`
 pub fn n_of(n: usize, rules: Vec<Rule>) -> Rule {
-    Rule::NumberOf(n, rules)
+    Rule::NumberOf { n: n, rules: rules }
 }
 
 /// Creates a rule for string comparison
 pub fn string_equals(description: &str, field: &str, val: &str) -> Rule {
-    Rule::Rule(description.into(),
-               field.into(),
-               Constraint::StringEquals(val.into()))
+    Rule::Rule {
+        desc: description.into(),
+        field: field.into(),
+        constraint: Constraint::StringEquals(val.into())
+    }
 }
 
 /// Creates a rule for int comparison.  
 ///
 ///If the checked value is not convertible to an integer, the result is `NotMet`
 pub fn int_equals(description: &str, field: &str, val: i32) -> Rule {
-    Rule::Rule(description.into(), field.into(), Constraint::IntEquals(val))
+    Rule::Rule {
+        desc: description.into(), 
+        field: field.into(), 
+        constraint: Constraint::IntEquals(val)
+    }
 }
 
 /// Creates a rule for int range comparison with the interval `[start, end]`.  
 ///
 /// If the checked value is not convertible to an integer, the result is `NotMet`
 pub fn int_range(description: &str, field: &str, start: i32, end: i32) -> Rule {
-    Rule::Rule(description.into(),
-               field.into(),
-               Constraint::IntRange(start, end))
+    Rule::Rule {
+        desc: description.into(),
+        field: field.into(),
+        constraint: Constraint::IntRange(start, end)
+    }
 }
 
 /// Creates a rule for boolean comparison.  
 ///
 /// Only input values of `"true"` (case-insensitive) are considered `true`, all others are considered `false`
 pub fn boolean(description: &str, field: &str, val: bool) -> Rule {
-    Rule::Rule(description.into(), field.into(), Constraint::Boolean(val))
+    Rule::Rule {
+        desc: description.into(), 
+        field: field.into(), 
+        constraint: Constraint::Boolean(val)
+    }
 }
 
 
